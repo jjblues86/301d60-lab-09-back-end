@@ -23,6 +23,7 @@ app.get('/', (request, response) => {
 app.get('/location', getLocation);
 app.get('/weather', getWeather);
 app.get('/events', searchEvents);
+app.get('/movies', searchMovie);
 
 //postgres
 const client = new pg.Client(process.env.DATABASE_URL);
@@ -48,12 +49,11 @@ function getLocation(request, response){
 
 
 function getWeather(request, response){
-  return searchWeather(request.query.data || 'Lynnwood, WA, USA')
+  return searchWeather(request.query.data)
     .then(weatherData => {
       response.send(weatherData);
     })
 }
-
 
 // searching location from SQL
 function lookUpLocation(query, handler){
@@ -125,12 +125,25 @@ function searchEvents(request, response){
     })
 }
 
+//Search Movies
+function searchMovie(request, response){
+  const moviesDataUrl = `https://api.themoviedb.org/3/search/movie?query=${request.query.data.search_query}&api_key=${process.env.MOVIE_API_KEY}`
+  console.log('this', moviesDataUrl)
+  return superagent.get(moviesDataUrl)
+    .then(responseData => {
+      const movieData = JSON.parse(responseData.text);
+      let movie = movieData.results.map(element => new Movies(element));
+      response.send(movie);
+    }).catch(err => console.error(err));
+}
+
 //Constructors
 function Location(location){
   this.formatted_query = location.formatted_address;
   this.latitude = location.geometry.location.lat;
   this.longitude = location.geometry.location.lng;
   this.long_name = location.address_components[0].long_name;
+  this.search_query = location.search_query;
 }
 
 function Daily(dailyForecast){
@@ -143,6 +156,17 @@ function Eventful(event){
   this.name = event.title;
   this.event_date = event.start_time;
   this.summary = event.description;
+}
+
+function Movies(movie){
+  this.title = movie.title;
+  this.overview = movie.overview;
+  this.average_votes = movie.vote_average;
+  this.total_votes = movie.vote_count;
+  // this.image_url = movie.poster_path ? `https://image.tmdb.org/t/p/w200_and_h300_bestv2/
+  this.image_url = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
+  this.popularity = movie.popularity;
+  this.released_on = movie.release_date;
 }
 
 //Error handler
