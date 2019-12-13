@@ -91,7 +91,6 @@ function searchLatToLng(query){
           console.log(result);
           console.log('stored to DB');
           location.id = result.rows[0].id
-          // console.log('what', geoData.body.results)
           return location;
         })
         .catch(err => console.error(err))
@@ -163,7 +162,6 @@ function Movies(movie){
   this.overview = movie.overview;
   this.average_votes = movie.vote_average;
   this.total_votes = movie.vote_count;
-  // this.image_url = movie.poster_path ? `https://image.tmdb.org/t/p/w200_and_h300_bestv2/
   this.image_url = movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '';
   this.popularity = movie.popularity;
   this.released_on = movie.release_date;
