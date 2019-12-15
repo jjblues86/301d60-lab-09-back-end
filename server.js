@@ -25,7 +25,7 @@ app.get('/weather', getWeather);
 app.get('/events', searchEvents);
 app.get('/movies', searchMovie);
 app.get('/yelp', searchRestaurants);
-// app.get('/trails', searchTrails);
+app.get('/trails', searchTrails);
 
 //postgres
 const client = new pg.Client(process.env.DATABASE_URL);
@@ -118,10 +118,9 @@ function searchEvents(request, response){
   const eventsDataUrl = `http://api.eventful.com/json/events/search?location=${request.query.data.formatted_query}&app_key=${process.env.EVENTBRITE_API_KEY}`
   return superagent.get(eventsDataUrl)
     .then(eventData => {
+
       const jsonData = JSON.parse(eventData.text)
       const events = jsonData.events.event;
-      console.log('this', events)
-
       let eventArray = events.map(event => (new Eventful(event)));
 
       response.send(eventArray);
@@ -159,10 +158,17 @@ function searchRestaurants(request,response){
 }
 
 // //Search for Trails
-// function searchTrails(request, response){
-//   const trailDataUrl = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&maxDistance=10&key=${process.env.TRAIL_API_URL}`
-//   .then
-// }
+function searchTrails(request, response){
+  const trailDataUrl = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&key=${process.env.TRAIL_API_URL}`
+  return superagent.get(trailDataUrl)
+    .then(trailsData => {
+
+      const trailsParse = JSON.parse(trailsData.text);
+      let trailObj = trailsParse.trails.map(trail => { new Trails(trail)})
+      response.status(200).send(trailObj);
+    })
+    .catch(err => console.error(err));
+}
 
 
 //Constructors
@@ -210,18 +216,18 @@ function Restuarants(business){
 }
 
 //Trails
-// function searchTrails(trail){
-//   this.name = trail.name;
-//   this.location = trail.location;
-//   this.length = trail.length;
-//   this.stars = trail.stars;
-//   this.star_votes = trail.starVotes;
-//   this.summary = trail.summary;
-//   this.trail_url = trail.url;
-//   this.conditions = trail.conditionStatus;
-//   this.condition_date = trail.conditionDate;
-//   this.condition_time = trail.conditionDate;
-// }
+function Trails(trail){
+  this.name = trail.name;
+  this.location = trail.location;
+  this.length = trail.length;
+  this.stars = trail.stars;
+  this.star_votes = trail.starVotes;
+  this.summary = trail.summary;
+  this.trail_url = trail.url;
+  this.conditions = trail.conditionStatus;
+  this.condition_date = trail.conditionDate;
+  this.condition_time = trail.conditionDate;
+}
 
 
 app.listen(PORT, () => {
