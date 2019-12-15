@@ -24,6 +24,8 @@ app.get('/location', getLocation);
 app.get('/weather', getWeather);
 app.get('/events', searchEvents);
 app.get('/movies', searchMovie);
+app.get('/yelp', searchRestaurants);
+// app.get('/trails', searchTrails);
 
 //postgres
 const client = new pg.Client(process.env.DATABASE_URL);
@@ -108,6 +110,7 @@ function searchWeather(query){
       weatherData.body.daily.data.map(forecast => weatheArray.push(new Daily(forecast)));
       return weatheArray;
     })
+    .catch(err => console.error(err));
 }
 
 // Search for events
@@ -117,17 +120,18 @@ function searchEvents(request, response){
     .then(eventData => {
       const jsonData = JSON.parse(eventData.text)
       const events = jsonData.events.event;
-      let eventArray = [];
-      events.map(event => eventArray.push(new Eventful(event)));
+      console.log('this', events)
+
+      let eventArray = events.map(event => (new Eventful(event)));
 
       response.send(eventArray);
     })
+    .catch(err => console.error(err));
 }
 
 //Search Movies
 function searchMovie(request, response){
   const moviesDataUrl = `https://api.themoviedb.org/3/search/movie?query=${request.query.data.search_query}&api_key=${process.env.MOVIE_API_KEY}`
-  console.log('this', moviesDataUrl)
   return superagent.get(moviesDataUrl)
     .then(responseData => {
       const movieData = JSON.parse(responseData.text);
@@ -135,6 +139,31 @@ function searchMovie(request, response){
       response.send(movie);
     }).catch(err => console.error(err));
 }
+
+//Search Yelp
+function searchRestaurants(request,response){
+  const yelpDataUrl = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${request.query.data.latitude}&longitude=${request.query.data.longitude}&limit=20`
+  return superagent.get(yelpDataUrl)
+    .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+    .then(foodData => {
+
+      const yelpParse = JSON.parse(foodData.text);
+      let yelpData = yelpParse.businesses.map( business => {
+        let yelpObj = new Restuarants(business);
+        return yelpObj;
+      })
+      //normalize the data
+      response.status(200).send(yelpData);
+    })
+    .catch(err => { console.error(err)});
+}
+
+// //Search for Trails
+// function searchTrails(request, response){
+//   const trailDataUrl = `https://www.hikingproject.com/data/get-trails?lat=${request.query.data.latitude}&lon=${request.query.data.longitude}&maxDistance=10&key=${process.env.TRAIL_API_URL}`
+//   .then
+// }
+
 
 //Constructors
 function Location(location){
@@ -145,11 +174,14 @@ function Location(location){
   this.search_query = location.search_query;
 }
 
+
+//Weather
 function Daily(dailyForecast){
   this.forecast = dailyForecast.summary;
   this.time = new Date(dailyForecast.time * 1000).toDateString();
 }
 
+//Events
 function Eventful(event){
   this.link = event.url;
   this.name = event.title;
@@ -157,6 +189,7 @@ function Eventful(event){
   this.summary = event.description;
 }
 
+//Movies
 function Movies(movie){
   this.title = movie.title;
   this.overview = movie.overview;
@@ -167,10 +200,29 @@ function Movies(movie){
   this.released_on = movie.release_date;
 }
 
-//Error handler
-app.get('/*', function(request, response){
-  response.status(404).send('Try again!')
-})
+//Yelp
+function Restuarants(business){
+  this.name = business.name;
+  this.image_url = business.image_url;
+  this.price = business.price;
+  this.rating = business.rating;
+  this.url = business.url;
+}
+
+//Trails
+// function searchTrails(trail){
+//   this.name = trail.name;
+//   this.location = trail.location;
+//   this.length = trail.length;
+//   this.stars = trail.stars;
+//   this.star_votes = trail.starVotes;
+//   this.summary = trail.summary;
+//   this.trail_url = trail.url;
+//   this.conditions = trail.conditionStatus;
+//   this.condition_date = trail.conditionDate;
+//   this.condition_time = trail.conditionDate;
+// }
+
 
 app.listen(PORT, () => {
   console.log(`app running on PORT: ${PORT}`);
